@@ -112,8 +112,9 @@ def validate():
             if act not in KNOWN_ACTIONS:
                 errs.append(f"{aid} 第 {i + 1} 步用了未知动作：{act}")
             if act in ("click", "type", "toggle", "radio", "waitFor", "waitGone"):
-                if not s.get("target"):
-                    errs.append(f"{aid} 第 {i + 1} 步缺少 target")
+                # 执行器支持"只给 text、不给选择器"的全文档文本兜底，校验要放行
+                if not s.get("target") and not s.get("text"):
+                    errs.append(f"{aid} 第 {i + 1} 步缺少 target（或 text）")
             if act == "type" and s.get("value") is None:
                 errs.append(f"{aid} 第 {i + 1} 步是 type 但缺少 value")
 

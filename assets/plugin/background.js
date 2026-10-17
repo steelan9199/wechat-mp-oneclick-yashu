@@ -237,9 +237,13 @@ function pageRun(steps, verify) {
             const head = norm(step.text).slice(0, 4);
             const near = [...new Set(
               [...document.querySelectorAll('span,div,button,a,p,label')]
-                .filter(isVisible)
+                /* 先文案后可见性：避免对大页面上千个节点做布局计算 */
+                .filter((e) => {
+                  const t = (e.textContent || '').trim();
+                  if (!t || t.length > 24 || !norm(t).includes(head)) return false;
+                  return isVisible(e);
+                })
                 .map((e) => (e.textContent || '').trim())
-                .filter((t) => t && t.length <= 24 && norm(t).includes(head))
             )].slice(0, 5);
             log.push('· 页面上相近的文案：' + (near.length ? near.join(' | ') : '无'));
           }
