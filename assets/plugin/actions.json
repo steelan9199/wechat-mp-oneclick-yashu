@@ -1,6 +1,13 @@
 {
   "_comment": "每个 action 就是一个设置项。加新选项只需往 actions 数组里追加一段，不需要改任何 JS 代码。target 可以是字符串，也可以是字符串数组（按顺序尝试候选选择器）。",
   "_valueHint": "步骤里的 {{key}} 会被弹窗中同名输入框的值替换。",
+  "_runAllHint": "runAll 决定弹窗里的「一键」按钮：按 actions 数组顺序依次执行，每项之间间隔 gap 毫秒。",
+  "runAll": {
+    "enabled": true,
+    "name": "一键设置",
+    "buttonLabel": "一键完成全部设置",
+    "gap": 1000
+  },
   "actions": [
     {
       "id": "original",

@@ -326,9 +326,7 @@ function pageRun(steps, verify) {
 
 /* ===================== 主流程 ===================== */
 
-async function runAction(tabId, actionId, values) {
-  const log = [];
-
+async function assertHost(tabId) {
   const [hostRes] = await chrome.scripting.executeScript({
     target: { tabId },
     func: () => location.hostname
@@ -336,15 +334,13 @@ async function runAction(tabId, actionId, values) {
   const host = hostRes ? hostRes.result : '';
 
   if (!/(^|\.)mp\.weixin\.qq\.com$/.test(host || '')) {
-    return { ok: false, log: ['❌ 当前页面不是公众号后台（' + (host || '未知') + '）'] };
+    return '❌ 当前页面不是公众号后台（' + (host || '未知') + '）';
   }
+  return null;
+}
 
-  const cfg = await loadConfig();
-  const action = (cfg.actions || []).find((a) => a.id === actionId);
-  if (!action) {
-    return { ok: false, log: ['❌ actions.json 里没有 id 为 ' + actionId + ' 的设置项'] };
-  }
-
+/* 单个设置项：把 steps 注入页面执行，再带回校验结果 */
+async function runOne(tabId, action, values) {
   const steps = JSON.parse(JSON.stringify(action.steps || [])).map((s) => {
     if (typeof s.value === 'string') s.value = interpolate(s.value, values || {});
     return s;
@@ -358,19 +354,93 @@ async function runAction(tabId, actionId, values) {
   });
 
   const out = res ? res.result : null;
-  if (!out) return { ok: false, log: log.concat(['❌ 执行器没有返回结果，请刷新页面后重试']) };
+  if (!out) return { ok: false, log: ['❌ 执行器没有返回结果，请刷新页面后重试'] };
 
-  return { ok: !!out.ok, log: log.concat(out.log || []) };
+  return { ok: !!out.ok, log: out.log || [] };
+}
+
+async function runAction(tabId, actionId, values) {
+  const bad = await assertHost(tabId);
+  if (bad) return { ok: false, log: [bad] };
+
+  const cfg = await loadConfig();
+  const action = (cfg.actions || []).find((a) => a.id === actionId);
+  if (!action) {
+    return { ok: false, log: ['❌ actions.json 里没有 id 为 ' + actionId + ' 的设置项'] };
+  }
+
+  return runOne(tabId, action, values);
+}
+
+/* 一键：按 actions 顺序逐个执行，中间固定间隔 gap 毫秒。
+ * 单项失败不中断后续项（已声明过原创之类属于正常状态），最后给出汇总。 */
+async function runAll(tabId, values, gap) {
+  const log = [];
+
+  const bad = await assertHost(tabId);
+  if (bad) return { ok: false, log: [bad] };
+
+  const cfg = await loadConfig();
+  const actions = (cfg.actions || []).filter((a) => a.enabled !== false);
+  if (!actions.length) return { ok: false, log: ['❌ actions.json 里没有配置任何设置项'] };
+
+  const waitMs = Number.isFinite(gap) && gap >= 0 ? gap : 1000;
+  const waitText = (waitMs % 1000 ? (waitMs / 1000).toFixed(1) : String(waitMs / 1000)) + ' 秒';
+  const failed = [];
+
+  /* 弹窗被点掉也不丢进度：每一步都落一份快照，重开弹窗能看到上次结果 */
+  const flush = () => chrome.storage.local.set({ lastRun: { at: Date.now(), log: log.slice() } });
+  log.push('开始执行 ' + actions.length + ' 项，间隔 ' + waitText);
+  flush().catch(() => {});
+
+  for (let i = 0; i < actions.length; i++) {
+    const a = actions[i];
+    log.push('【' + (i + 1) + '/' + actions.length + '】' + (a.name || a.id));
+
+    let r;
+    try {
+      r = await runOne(tabId, a, values);
+    } catch (e) {
+      r = { ok: false, log: ['❌ 异常：' + (e && e.message ? e.message : e)] };
+    }
+    log.push(...(r.log || []));
+    if (!r.ok) failed.push(a.name || a.id);
+    flush().catch(() => {});
+
+    if (i < actions.length - 1) {
+      log.push('· 等待 ' + waitText + '…');
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+
+  log.push('');
+  log.push(
+    failed.length
+      ? '⚠ 完成 ' + (actions.length - failed.length) + '/' + actions.length + '，失败：' + failed.join('、')
+      : '✔ 全部 ' + actions.length + ' 项已完成'
+  );
+  flush().catch(() => {});
+
+  return { ok: failed.length === 0, log };
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (!msg || msg.type !== 'run') return;
+  if (!msg) return;
 
-  runAction(msg.tabId, msg.actionId, msg.values)
-    .then((r) => sendResponse(r))
-    .catch((e) =>
-      sendResponse({ ok: false, log: ['❌ 异常：' + (e && e.message ? e.message : e)] })
-    );
+  const reply = (p) =>
+    p
+      .then((r) => sendResponse(r))
+      .catch((e) =>
+        sendResponse({ ok: false, log: ['❌ 异常：' + (e && e.message ? e.message : e)] })
+      );
 
-  return true;
+  if (msg.type === 'run') {
+    reply(runAction(msg.tabId, msg.actionId, msg.values));
+    return true;
+  }
+
+  if (msg.type === 'runAll') {
+    reply(runAll(msg.tabId, msg.values, msg.gap));
+    return true;
+  }
 });
