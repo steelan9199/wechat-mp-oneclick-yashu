@@ -1,0 +1,64 @@
+{
+  "_comment": "每个 action 就是一个设置项。加新选项只需往 actions 数组里追加一段，不需要改任何 JS 代码。target 可以是字符串，也可以是字符串数组（按顺序尝试候选选择器）。",
+  "_valueHint": "步骤里的 {{key}} 会被弹窗中同名输入框的值替换。",
+  "actions": [
+    {
+      "id": "original",
+      "name": "原创声明",
+      "desc": "点击未声明 → 填作者 → 确定",
+      "inputs": [
+        {
+          "key": "author",
+          "label": "作者名",
+          "placeholder": "请输入作者（≤8字）",
+          "maxLength": 8,
+          "default": ""
+        }
+      ],
+      "steps": [
+        {
+          "action": "click",
+          "desc": "点击「未声明」",
+          "target": "#js_original > div:nth-child(1) > div.setting-group__switch.js_original_apply.js_edit_ori > div"
+        },
+        {
+          "action": "waitFor",
+          "desc": "等待原创弹框里的输入框",
+          "target": [
+            "span.js_customerauthor_container > input.js_author",
+            "#js_original_edit_box input.js_author"
+          ],
+          "timeout": 8000
+        },
+        {
+          "action": "type",
+          "desc": "填写作者名",
+          "mode": "composed",
+          "target": [
+            "span.js_customerauthor_container > input.js_author",
+            "#js_original_edit_box input.js_author"
+          ],
+          "value": "{{author}}"
+        },
+        {
+          "action": "click",
+          "desc": "点击「确定」",
+          "pick": "last",
+          "target": [
+            "#vue_app > mp-image-product-dialog > div > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div > div:nth-child(2) > button",
+            "button.weui-desktop-btn.weui-desktop-btn_primary"
+          ],
+          "text": "确定"
+        }
+      ],
+      "verify": {
+        "action": "gone",
+        "target": [
+          "span.js_customerauthor_container > input.js_author",
+          "#js_original_edit_box input.js_author"
+        ],
+        "timeout": 6000
+      }
+    }
+  ]
+}

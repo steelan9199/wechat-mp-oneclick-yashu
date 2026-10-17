@@ -1,0 +1,26 @@
+# ===== 构建产物（每次 build 重新生成，不提交）=====
+dist/
+*.zip
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ===== 系统 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 编辑器 / IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== 临时文件 =====
+*.log
+*.tmp
+~$*
