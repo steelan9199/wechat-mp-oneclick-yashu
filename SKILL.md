@@ -5,7 +5,7 @@ description: 生成与维护「公众号一键设置」Edge 扩展，在公众�
 
 # 公众号一键设置扩展
 
-产出一个可直接加载到 Edge 的浏览器扩展，用于在微信公众号图文编辑页自动完成各种设置项（目前有「原创声明」，可按同一套方式扩展「赞赏」「留言」等）。
+产出一个可直接加载到 Edge 的浏览器扩展，用于在微信公众号图文编辑页自动完成各种设置项（目前有「原创声明」「赞赏」，可按同一套方式扩展「留言」等）。
 
 核心设计：**纯配置驱动**。执行器只实现"动作能力"（点击、输入、开关、等待、校验），业务逻辑全在 `actions.json`。加一个新设置项 = 加一段 JSON，`background.js` 一行都不用改。
 
@@ -130,31 +130,53 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 
 ### 配置写法
 
+真实可用的完整例子（「赞赏」，2026-10 实测通过，无输入参数）：
+
 ```json
 {
   "id": "reward",
   "name": "赞赏",
-  "desc": "打开赞赏开关并设置金额",
-  "inputs": [
-    { "key": "amount", "label": "金额", "placeholder": "如 5", "maxLength": 4, "default": "5" }
-  ],
+  "desc": "点「不开启」→ 同意协议 → 确定，成功后显示「账户: xxx」",
   "steps": [
-    { "action": "click", "desc": "点击未声明打开弹框",
-      "target": "#js_original > div:nth-child(1) > div.setting-group__switch.js_original_apply.js_edit_ori > div" },
-    { "action": "waitFor", "desc": "等待弹框",
-      "target": "span.js_customerauthor_container > input.js_author", "timeout": 8000 },
-    { "action": "toggle", "desc": "打开赞赏开关", "target": ".js_reward_switch", "checked": true },
-    { "action": "waitFor", "desc": "等待赞赏设置区", "target": ".reward_settings", "timeout": 5000 },
-    { "action": "type", "desc": "填写金额", "mode": "composed",
-      "target": ".reward_settings input", "value": "{{amount}}" }
+    { "action": "click", "desc": "点击赞赏开关（不开启）", "wait": 1000,
+      "target": [
+        "#js_reward_setting_area > div > div.setting-group__switch.js_reward_open > span",
+        "#js_reward_setting_area .js_reward_open span.js_reward_setting_tips"
+      ] },
+    { "action": "waitFor", "desc": "等待赞赏设置弹框", "timeout": 8000,
+      "target": [".reward-setting-dialog__footer", ".agreement-check-btn__wrp"] },
+    { "action": "toggle", "desc": "勾选《赞赏功能使用协议》", "checked": true,
+      "visibleOnly": false, "optional": true, "wait": 300,
+      "target": [".agreement-check-btn__wrp input.weui-desktop-form__checkbox",
+                 "#vue_app mp-image-product-dialog input.weui-desktop-form__checkbox"] },
+    { "action": "click", "desc": "点击「确定」", "text": "确定", "pick": "last", "wait": 1000,
+      "target": [
+        "#vue_app > mp-image-product-dialog > div > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div > div.operate-btn__group > div:nth-child(1) > button",
+        ".reward-setting-dialog__footer .operate-btn__group button.weui-desktop-btn_primary",
+        "button.weui-desktop-btn.weui-desktop-btn_primary"
+      ] }
   ],
-  "verify": { "action": "exists", "target": ".reward_settings", "timeout": 5000 }
+  "verify": { "action": "text", "value": "账户", "timeout": 8000,
+    "target": ["#js_reward_setting_area span.js_reward_setting_tips",
+               "#js_reward_setting_area .js_reward_open .js_reward_setting_tips"] }
 }
 ```
 
-`inputs` 里的 `key` 会在 steps 里用 `{{key}}` 引用；弹窗会自动为该 `key` 生成一个输入框，并记住上次填的值。
+带输入参数时，加 `inputs` 数组，`key` 在 steps 里用 `{{key}}` 引用：
 
-**注意**：上面「赞赏」的 `.js_reward_switch`、`.reward_settings` 是从 DOM dump 里推测的，**尚未实测**，接入前必须手工验证。详见 `references/selectors.md` 的字段表。
+```json
+"inputs": [
+  { "key": "author", "label": "作者名", "placeholder": "请输入作者（≤8字）", "maxLength": 8, "default": "" }
+],
+"steps": [
+  { "action": "type", "desc": "填写作者名", "mode": "composed", "value": "{{author}}",
+    "target": ["span.js_customerauthor_container > input.js_author"] }
+]
+```
+
+弹窗会自动为每个 `key` 渲染输入框，并在 `chrome.storage.local` 里记住上次填的值；`maxLength` 会同时限制输入框和提交校验。
+
+具体选择器一律以 `references/selectors.md` 为准，那边是实测记录。
 
 ## 动作能力
 
@@ -170,6 +192,8 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 
 公共字段：`target`（字符串或字符串数组，按顺序试）、`text`（按文本精确过滤）、`index`、`visibleOnly: false`（允许操作隐藏元素）、`optional: true`（找不到就跳过）、`wait`（动作后额外等待毫秒）、`desc`（日志里显示的名字）。
 
+**关于隐藏 checkbox（协议勾选、开关类）**：`toggle` 的幂等只在能读到 `input.checked` 时成立。`visibleOnly` 不为 false 且 input 藏着时，执行器会退到父级 `<label>`/`<div>` 上点——那玩意没有 `checked` 属性，每次都会点，已勾选时等于**取消勾选**。所以操作隐藏 checkbox 一律写成 `target: <input 的精确选择器>` + `"visibleOnly": false`，让它在 input 本身上判断状态。
+
 `verify.action`：`gone` / `exists` / `checked` / `value` / `text`。
 
 ## 硬规则
@@ -184,6 +208,8 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 6. **改完必须三件事**：跑 build、重载扩展、刷新页面。只刷新网页不生效。
 7. **版本号只在用户要求升位时加 `--bump`**。同一份代码重复打包不要反复升位，否则版本号失去意义；`--bump` 会写回源码，属于持久变更。
 8. **加新功能前必须先发清单**。把 `references/input-template.md` 发给用户、等用户填完，才能开始写配置。收到清单前列出的信息之前不许动 `actions.json`。
+9. **同页可能有多个弹框同时存在**。原创、赞赏共用 `mp-image-product-dialog` 这个容器，关掉的弹框节点仍在 DOM 里。定位弹框内的按钮必须"弹框专属 class + 可见性过滤"双保险，点确定一律配 `"text": "确定"` + `"pick": "last"`，否则可能点到另一个弹框的按钮。
+10. **每加一项就把实测通过的选择器写回 `references/selectors.md`**。选择器会随微信改版失效，文档是下次排障的第一手依据。
 
 ## 排障
 
@@ -194,6 +220,9 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 | `❌ 找不到元素` | 选择器过期，去 `references/selectors.md` 核对；或弹框还没出现，加 `waitFor` |
 | `❌ 校验未通过` | 操作被页面拦下，先抓页面自己的提示文字 |
 | 提示"不能超过 8 个字" | 输入值本身超长，不是程序问题 |
+| 赞赏：日志有"点击确定"但校验未通过 | 协议没勾上，确定按钮是灰的。检查 `.agreement-check-btn__wrp input.weui-desktop-form__checkbox` 是否带 `visibleOnly: false` |
+| 赞赏：点了确定却弹回原来的弹框 / 没变化 | 点到了原创弹框的确定。两个弹框共用容器，必须 `text: "确定"` + `pick: "last"` |
+| 赞赏：`❌ 找不到元素：点击赞赏开关` | 页面没滚动到设置区，或 `#js_reward_setting_area` 尚未渲染（先点一次文章设置） |
 
 需要抓页面提示文字时，在页面控制台跑：
 

@@ -86,3 +86,32 @@ const visible = r.width > 1 && r.height > 1 && getComputedStyle(el).visibility !
 ## 10. 弹框里的可见性会随选项变化
 
 原创类型 radio 切换后，弹框里的字段会增减（比如选"转载"会多出白名单输入框）。写步骤时先在目标状态下取选择器，别在默认状态下取。
+
+## 11. 原创弹框和赞赏弹框共用 `mp-image-product-dialog` 容器
+
+两个弹框的「确定」按钮**路径不同**：
+
+| 弹框 | 确定按钮路径片段 |
+|---|---|
+| 原创 | `... __ft > div > div:nth-child(2) > button` |
+| 赞赏 | `... __ft > div > div.operate-btn__group > div:nth-child(1) > button` |
+
+DOM 里两个弹框同时存在（一个关着但节点还在），靠 `pick` 的可见性过滤才能选中真正要点的那个。所以赞赏的确定按钮必须先用带 `operate-btn__group` 的精确路径，泛化选择器 `button.weui-desktop-btn_primary` 只作最后兜底，并配 `"text": "确定"` + `"pick": "last"`。
+
+## 12. 协议勾选框是"隐藏 input + 视觉图标"，要点 input 本身
+
+```html
+<label class="weui-desktop-form__check-label">
+  <input type="checkbox" class="weui-desktop-form__checkbox">  <!-- 被 CSS 隐藏 -->
+  <i class="weui-desktop-icon-checkbox"></i>                    <!-- 用户看到的勾 -->
+</label>
+```
+
+- 直接点 `<label>` 或 `<i>`：**不幂等**——已勾选时再点会取消勾选，然后确定按钮变灰，表现为"点了确定没反应"
+- 正确写法：`toggle` + `visibleOnly: false` 作用在 `input` 上。`toggle` 读 `input.checked` 判断当前真实状态，已是目标状态就跳过
+- 同类陷阱：任何 `.weui-desktop-switch__input` / `.weui-desktop-form__checkbox` 都适用此规则
+
+## 13. 赞赏成功判定看文案，不看开关
+
+赞赏开关成功后的表现不是"变绿"，而是右侧文案从「不开启」变成「账户: 公众号名」。`verify` 用 `action: "text"` + `value: "账户"` 才可靠。
+

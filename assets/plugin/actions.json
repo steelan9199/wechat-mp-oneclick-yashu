@@ -59,6 +59,64 @@
         ],
         "timeout": 6000
       }
+    },
+    {
+      "id": "reward",
+      "name": "赞赏",
+      "desc": "点「不开启」→ 同意协议 → 确定，成功后显示「账户: xxx」",
+      "steps": [
+        {
+          "action": "click",
+          "desc": "点击赞赏开关（不开启）",
+          "target": [
+            "#js_reward_setting_area > div > div.setting-group__switch.js_reward_open > span",
+            "#js_reward_setting_area .js_reward_open span.js_reward_setting_tips"
+          ],
+          "wait": 1000
+        },
+        {
+          "action": "waitFor",
+          "desc": "等待赞赏设置弹框",
+          "target": [
+            ".reward-setting-dialog__footer",
+            ".agreement-check-btn__wrp"
+          ],
+          "timeout": 8000
+        },
+        {
+          "action": "toggle",
+          "desc": "勾选《赞赏功能使用协议》",
+          "target": [
+            ".agreement-check-btn__wrp input.weui-desktop-form__checkbox",
+            "#vue_app mp-image-product-dialog input.weui-desktop-form__checkbox"
+          ],
+          "checked": true,
+          "visibleOnly": false,
+          "optional": true,
+          "wait": 300
+        },
+        {
+          "action": "click",
+          "desc": "点击「确定」",
+          "pick": "last",
+          "target": [
+            "#vue_app > mp-image-product-dialog > div > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div > div.operate-btn__group > div:nth-child(1) > button",
+            ".reward-setting-dialog__footer .operate-btn__group button.weui-desktop-btn_primary",
+            "button.weui-desktop-btn.weui-desktop-btn_primary"
+          ],
+          "text": "确定",
+          "wait": 1000
+        }
+      ],
+      "verify": {
+        "action": "text",
+        "value": "账户",
+        "target": [
+          "#js_reward_setting_area span.js_reward_setting_tips",
+          "#js_reward_setting_area .js_reward_open .js_reward_setting_tips"
+        ],
+        "timeout": 8000
+      }
     }
   ]
 }

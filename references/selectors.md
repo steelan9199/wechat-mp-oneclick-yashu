@@ -63,6 +63,74 @@ button.weui-desktop-btn.weui-desktop-btn_primary
 
 ---
 
+## 赞赏（`#js_reward_setting_area`）
+
+### 1. 赞赏开关文案（点击后弹出赞赏设置弹框）
+
+```css
+#js_reward_setting_area > div > div.setting-group__switch.js_reward_open > span
+```
+
+备用：`#js_reward_setting_area .js_reward_open span.js_reward_setting_tips`
+
+元素结构：
+
+```html
+<div class="setting-group__switch js_reward_open">
+  <input class="weui-desktop-switch__input js_reward_setting_checkbox" type="checkbox" style="display:none">
+  <span class="setting-group__switch-tips js_reward_setting_tips">不开启</span>
+  <i class="read-more__icon__more"></i>
+</div>
+```
+
+可见。点击后约 1s 弹出赞赏设置弹框。**注意**：这里的 `js_reward_open` 是独立区域内的大开关，与原创弹框里那个 `js_reward_switch`（另一个开关）不是同一个元素，别混用。
+
+### 2. 弹框底部（判断弹框出现 / 定位确定按钮）
+
+```css
+.reward-setting-dialog__footer
+```
+
+### 3. 合作协议勾选框
+
+```css
+.agreement-check-btn__wrp input.weui-desktop-form__checkbox
+```
+
+父级：
+
+```html
+<div class="agreement-check-btn__wrp">
+  <label class="weui-desktop-form__check-label">
+    <input type="checkbox" checking="" class="weui-desktop-form__checkbox">
+    <i class="weui-desktop-icon-checkbox"></i>
+    <span class="weui-desktop-form__check-content">我已阅读并同意《微信公众平台赞赏功能使用协议》</span>
+  </label>
+</div>
+```
+
+真实 checkbox 被 CSS 隐藏，视觉是旁边的 `<i>`。配置里用 `toggle` + `visibleOnly: false` 直接点 input 本身（幂等：已勾选就跳过），比点 `<label>` 安全。
+
+### 4. 「确定」按钮
+
+```css
+#vue_app > mp-image-product-dialog > div > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div > div.operate-btn__group > div:nth-child(1) > button
+```
+
+兜底：`.reward-setting-dialog__footer .operate-btn__group button.weui-desktop-btn_primary`，配合 `"text": "确定"` + `"pick": "last"`。
+
+注意与原创弹框的确定按钮路径**不一样**（原创是 `div:nth-child(2) > button`，赞赏多了 `div.operate-btn__group`），两者共用同一个 `mp-image-product-dialog` 容器，所以必须靠可见性过滤区分。
+
+### 5. 成功标志
+
+```css
+#js_reward_setting_area span.js_reward_setting_tips
+```
+
+成功后文本从「不开启」变成「账户: 公众号名」，用 `verify.action: "text"` + `value: "账户"` 判定。
+
+---
+
 ## 千万不要用的选择器
 
 | 选择器 | 为什么不行 |
@@ -98,10 +166,10 @@ button.weui-desktop-btn.weui-desktop-btn_primary
 
 推论：
 
-- 「赞赏」开关在原创弹框内，class 含 `js_reward_switch`，操作方式应为点击其可见父级（`toggle` 动作会自动退到 `.setting-group__switch`）
+- 原创弹框内的「赞赏」开关 class 含 `js_reward_switch`，操作方式应为点击其可见父级（`toggle` 动作会自动退到 `.setting-group__switch`）。**它与独立赞赏区的 `js_reward_open` 不是一个元素**，赞赏功能以第一节「赞赏」的选择器为准
 - 原创类型是三选一 radio，用 `radio` 动作 + `index` 定位
 
-**这些尚未实测，接入前必须先手工验证一遍选择器。**
+**原创弹框内的这些尚未实测，接入前必须先手工验证一遍选择器。**
 
 ---
 
