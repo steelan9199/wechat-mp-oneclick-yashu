@@ -77,6 +77,30 @@ python scripts/build.py --bump major --out <目标目录> # 版本号第 1 位 +
 
 改了 `manifest.json` 的 `permissions` 时，必须重新加载扩展 + 刷新页面，否则新权限不生效。已装过的不要重复「加载解压缩」。
 
+## 打包这个 skill
+
+```bash
+python scripts/pack.py --list                # 只看会打包哪些文件
+python scripts/pack.py --out <输出路径>       # 打成 zip
+```
+
+**不要用 skill-creator 的 `package_skill.py`**：它用 `rglob('*')` 遍历全部文件，会把 `.git` 整个塞进压缩包（本项目 skill 目录本身就是 git 仓库，体积会逐次增长）。
+
+`pack.py` 在遍历阶段就按规则跳过 `.git` / `__pycache__` / `dist` / `*.zip` / 系统与编辑器文件，`.git` 原地不动。它同时做最小校验：SKILL.md 存在、frontmatter 含 name 和 description、name 与目录名一致。
+
+## 版本管理
+
+skill 目录本身是 git 仓库，远程为 `git@github.com:steelan9199/wechat-mp-oneclick-yashu.git`。
+
+改完内容（新增设置项、改选择器、改脚本）后提交：
+
+```bash
+cd "C:/Users/Administrator/.workbuddy/skills/wechat-mp-oneclick-yashu"
+git add -A && git commit -m "feat: 加赞赏设置" && git push
+```
+
+`dist/` 与 `*.zip` 已在 `.gitignore` 中忽略，产物不进仓库。
+
 ## 新增一个设置项（主流程）
 
 ### 第 0 步：先向用户索要信息清单（强制，不许跳过）
