@@ -178,6 +178,74 @@ area.slice(0, 3).map(e => e.outerHTML.slice(0, 1200));
 
 ---
 
+## 创作来源（`#js_claim_source_area`，2026-10-17 录入）
+
+「集合 / 原文链接 / 创作来源」三行结构相同，右侧都是「未添加」，**必须用行 id 限定**，不能靠文案兜底（页面上共 3 处「未添加」）。
+
+### 1. 「未添加」按钮
+
+```css
+#js_claim_source_area > label > div.allow_click_opr.js_claim_source_desc > span.lbl_content_desc_default
+```
+
+备用：`#js_claim_source_area .js_claim_source_desc span.lbl_content_desc_default`
+
+父级结构：
+
+```html
+<div class="allow_click_opr js_claim_source_desc">
+  <span class="lbl_content_after lbl_content_desc js_claim_source_selected" style="display: none;"></span>
+  <span class="lbl_content_after lbl_content_desc lbl_content_desc_default">未添加</span>
+  <i class="lbl_content_after read-more__icon__more">icon</i>
+</div>
+```
+
+注意父 div 的 `textContent` 是 `未添加icon`（`<i>` 里有字面量 `icon`），所以 `target` 里的 `text` 过滤只能落在 span 上，指向 div 的候选一定过不了文本过滤。配置里已加 `"textScan": false` 防止兜底误点「集合」行的「未添加」。
+
+### 2. 弹框
+
+```css
+div.claim-source-dialog
+```
+
+在 `#vue_app > mp-image-product-dialog > div.claim-source-dialog`，与其他弹框共用 `mp-image-product-dialog`，靠 `div.claim-source-dialog` 这个专属 class 区隔。
+
+### 3. 「内容由AI生成」选项
+
+```css
+div.claim-source-dialog .weui-desktop-form__check-content
+```
+
+配合 `"text": "内容由AI生成"`。父级：
+
+```html
+<div><label class="weui-desktop-form__check-label">
+  <input type="radio" class="weui-desktop-form__radio" value="1">
+  <i class="weui-desktop-icon-radio"></i>
+  <span class="weui-desktop-form__check-content">内容由AI生成</span>
+</label></div>
+```
+
+点 span 即可（事件冒泡到 label 切换 radio）。该弹框共 7 个声明类型：内容由AI生成（value=1）、素材来源官方媒体/网络新闻、内容剧情演绎仅供娱乐、个人观点仅供参考、健康医疗分享仅供参考、投资观点仅供参考、无需声明。
+
+### 4. 「确认」按钮
+
+```css
+div.claim-source-dialog .weui-desktop-dialog__ft div.weui-desktop-btn_wrp button.weui-desktop-btn_primary
+```
+
+完整路径：`#vue_app > mp-image-product-dialog > div.claim-source-dialog > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div:nth-child(1) > button`
+
+**这一项文案是「确认」，不是「确定」**。未选类型时按钮是禁用态（浅绿），点不动，所以选完选项要等 600ms 再点。
+
+### 5. 成功标志
+
+`#js_claim_source_area .js_claim_source_desc` 的文本从「未添加icon」变成「内容由AI生成…」。
+
+`verify` 用 `action: "text"` + `value: "AI"`：只取「AI」两个字，兼容页面以后写成「内容由AI生成」/「AI生成」等不同文案；该容器里除状态文案外没有别的字，不会误命中。
+
+---
+
 ## 千万不要用的选择器
 
 | 选择器 | 为什么不行 |
@@ -185,6 +253,7 @@ area.slice(0, 3).map(e => e.outerHTML.slice(0, 1200));
 | `document.querySelector('input.js_author')` | 页面有 **3 个** `input.js_author`，命中的是隐藏模板 |
 | `input.js_counter` / `input.js_author.js_counter` | 页面顶部的文章作者框 `#author` **也带这两个 class** |
 | `#author` | 这是页面顶部的文章作者字段，不是弹框里的原创作者 |
+| 按文本 `未添加` 全文档兜底 | 页面上有 **3 处**（集合 / 原文链接 / 创作来源），默认取第一个 = 点错行 |
 
 页面顶部文章作者框的真实内容：
 

@@ -171,6 +171,73 @@
         "pick": "last",
         "timeout": 6000
       }
+    },
+    {
+      "id": "claim_source",
+      "name": "创作来源",
+      "desc": "点「未添加」→ 选「内容由AI生成」→ 确认，成功后该行显示「内容由AI生成」",
+      "steps": [
+        {
+          "action": "click",
+          "desc": "点击「创作来源」行的「未添加」",
+          "text": "未添加",
+          "textScan": false,
+          "climb": true,
+          "wait": 1000,
+          "target": [
+            "#js_claim_source_area > label > div.allow_click_opr.js_claim_source_desc > span.lbl_content_desc_default",
+            "#js_claim_source_area .js_claim_source_desc span.lbl_content_desc_default",
+            "#js_claim_source_area .js_claim_source_desc span.lbl_content_desc"
+          ]
+        },
+        {
+          "action": "waitFor",
+          "desc": "等待创作来源弹框",
+          "timeout": 8000,
+          "target": [
+            "div.claim-source-dialog .weui-desktop-dialog__ft",
+            "div.claim-source-dialog"
+          ]
+        },
+        {
+          "action": "click",
+          "desc": "选择「内容由AI生成」",
+          "text": "内容由AI生成",
+          "wait": 600,
+          "target": [
+            "div.claim-source-dialog .weui-desktop-form__check-content",
+            "div.claim-source-dialog .weui-desktop-form__check-label > span",
+            "#vue_app > mp-image-product-dialog > div.claim-source-dialog .weui-desktop-dialog__bd .weui-desktop-form__check-content"
+          ]
+        },
+        {
+          "action": "click",
+          "desc": "点击「确认」",
+          "text": "确认",
+          "pick": "last",
+          "wait": 1200,
+          "target": [
+            "div.claim-source-dialog .weui-desktop-dialog__ft div.weui-desktop-btn_wrp button.weui-desktop-btn_primary",
+            "#vue_app > mp-image-product-dialog > div.claim-source-dialog > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div:nth-child(1) > button"
+          ]
+        },
+        {
+          "action": "waitGone",
+          "desc": "确认弹框已关闭",
+          "optional": true,
+          "timeout": 5000,
+          "target": ["div.claim-source-dialog .weui-desktop-dialog__ft"]
+        }
+      ],
+      "verify": {
+        "action": "text",
+        "value": "AI",
+        "timeout": 8000,
+        "target": [
+          "#js_claim_source_area .js_claim_source_desc",
+          "#js_claim_source_area .js_claim_source_desc span.lbl_content_desc"
+        ]
+      }
     }
   ]
 }
