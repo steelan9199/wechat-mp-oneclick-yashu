@@ -2,6 +2,7 @@
   "_comment": "每个 action 就是一个设置项。加新选项只需往 actions 数组里追加一段，不需要改任何 JS 代码。target 可以是字符串，也可以是字符串数组（按顺序尝试候选选择器）。",
   "_valueHint": "步骤里的 {{key}} 会被弹窗中同名输入框的值替换。",
   "_runAllHint": "runAll 决定弹窗里的「一键」按钮：按 actions 数组顺序依次执行，每项之间间隔 gap 毫秒。",
+  "_skipIfHint": "某个 action 可加 skipIf：执行前先找它，命中就整项跳过（返回 skipped），不跑 steps、不跑 verify。",
   "runAll": {
     "enabled": true,
     "name": "一键设置",
@@ -115,6 +116,16 @@
       "id": "comment",
       "name": "留言",
       "desc": "点「不开启留言」→ 等 1 秒 → 点「确定」，成功后该行显示「已开启」",
+      "skipIf": {
+        "desc": "留言行已显示「留言自动精选公开」，无需重复设置",
+        "timeout": 1500,
+        "text": "留言自动精选公开",
+        "target": [
+          "#js_comment_setting_area .setting-group__switch-tips.js_interaction_content",
+          "#js_comment_setting_area .js_interaction_content",
+          ".setting-group__switch-tips.js_interaction_content"
+        ]
+      },
       "steps": [
         {
           "action": "click",

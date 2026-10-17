@@ -47,7 +47,7 @@ function interpolate(str, values) {
 
 /* ===================== 页面内执行器（注入到 MAIN world） ===================== */
 
-function pageRun(steps, verify) {
+function pageRun(steps, verify, skipIf) {
   return (async () => {
     const log = [];
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -185,6 +185,19 @@ function pageRun(steps, verify) {
       fire(el, 'change');
       return el.value;
     };
+
+    /* ===== 前置条件：命中就整项跳过（例：留言已显示「留言自动精选公开」就不用再设置） ===== */
+    if (skipIf && (skipIf.target || skipIf.text)) {
+      const hit = (await waitEl(skipIf, skipIf.timeout || 1200)) || null;
+      if (hit) {
+        return {
+          ok: true,
+          skipped: true,
+          log: ['⏭ 已满足前置条件，跳过此项：' + (skipIf.desc || hit.textContent.trim().slice(0, 20))]
+        };
+      }
+      log.push('· 前置条件未命中，继续执行');
+    }
 
     for (const step of steps) {
       const label = step.desc || step.action;
@@ -350,13 +363,13 @@ async function runOne(tabId, action, values) {
     target: { tabId },
     world: 'MAIN',
     func: pageRun,
-    args: [steps, action.verify || null]
+    args: [steps, action.verify || null, action.skipIf || null]
   });
 
   const out = res ? res.result : null;
   if (!out) return { ok: false, log: ['❌ 执行器没有返回结果，请刷新页面后重试'] };
 
-  return { ok: !!out.ok, log: out.log || [] };
+  return { ok: !!out.ok, skipped: !!out.skipped, log: out.log || [] };
 }
 
 async function runAction(tabId, actionId, values) {
@@ -387,6 +400,7 @@ async function runAll(tabId, values, gap) {
   const waitMs = Number.isFinite(gap) && gap >= 0 ? gap : 1000;
   const waitText = (waitMs % 1000 ? (waitMs / 1000).toFixed(1) : String(waitMs / 1000)) + ' 秒';
   const failed = [];
+  const skipped = [];
 
   /* 弹窗被点掉也不丢进度：每一步都落一份快照，重开弹窗能看到上次结果 */
   const flush = () => chrome.storage.local.set({ lastRun: { at: Date.now(), log: log.slice() } });
@@ -404,7 +418,8 @@ async function runAll(tabId, values, gap) {
       r = { ok: false, log: ['❌ 异常：' + (e && e.message ? e.message : e)] };
     }
     log.push(...(r.log || []));
-    if (!r.ok) failed.push(a.name || a.id);
+    if (r.skipped) skipped.push(a.name || a.id);
+    else if (!r.ok) failed.push(a.name || a.id);
     flush().catch(() => {});
 
     if (i < actions.length - 1) {
@@ -414,10 +429,12 @@ async function runAll(tabId, values, gap) {
   }
 
   log.push('');
+  const done = actions.length - failed.length - skipped.length;
+  const tail = skipped.length ? '（跳过：' + skipped.join('、') + '）' : '';
   log.push(
     failed.length
-      ? '⚠ 完成 ' + (actions.length - failed.length) + '/' + actions.length + '，失败：' + failed.join('、')
-      : '✔ 全部 ' + actions.length + ' 项已完成'
+      ? '⚠ 完成 ' + done + '/' + actions.length + '，失败：' + failed.join('、') + tail
+      : '✔ 全部 ' + actions.length + ' 项已处理' + tail
   );
   flush().catch(() => {});
 

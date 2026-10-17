@@ -107,6 +107,11 @@ def validate():
         if not a.get("steps"):
             errs.append(f"{aid} 没有 steps")
 
+        skip = a.get("skipIf")
+        if skip is not None:
+            if not isinstance(skip, dict) or not (skip.get("target") or skip.get("text")):
+                errs.append(f"{aid} 的 skipIf 至少需要 target 或 text")
+
         for i, s in enumerate(a.get("steps") or []):
             act = s.get("action")
             if act not in KNOWN_ACTIONS:

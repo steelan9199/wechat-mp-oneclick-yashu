@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "公众号一键设置",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "在公众号图文编辑页一键完成原创声明、赞赏、留言、创作来源等设置项。所有动作由 actions.json 驱动，加新选项不需要改代码。",
   "permissions": [
     "activeTab",

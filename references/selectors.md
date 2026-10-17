@@ -306,3 +306,35 @@ div.claim-source-dialog .weui-desktop-dialog__ft div.weui-desktop-btn_wrp button
 3. 再用结构（父级 class 链）写一个更稳的备选，两个都填进 `target` 数组
 4. 判断"可见"一律用 `getBoundingClientRect()` 的宽高，**不要用 `offsetParent`**（`position:fixed` 容器的后代会被误判为不可见）
 5. 页面里有隐藏模板是常态，任何 `querySelector` 都要做可见性过滤
+
+---
+
+## 留言行：判断「是否已开启」（2.1.1，skipIf 用）
+
+留言已开启时，设置区右侧不是「不开启留言」，而是：
+
+```html
+<div class="setting-group__switch-tips js_interaction_content">留言自动精选公开</div>
+```
+
+配置（`actions.json` 里 `comment` 项的 `skipIf`）：
+
+```json
+"skipIf": {
+  "desc": "留言行已显示「留言自动精选公开」，无需重复设置",
+  "timeout": 1500,
+  "text": "留言自动精选公开",
+  "target": [
+    "#js_comment_setting_area .setting-group__switch-tips.js_interaction_content",
+    "#js_comment_setting_area .js_interaction_content",
+    ".setting-group__switch-tips.js_interaction_content"
+  ]
+}
+```
+
+要点：
+
+- 三级候选：`#js_comment_setting_area` 限定（最稳）→ 同类收窄 → 裸 class 兜底，全部带 `text` 精确匹配，避免命中别的「互动内容」提示（原创区也有 `js_interaction_content` 家族）
+- 文本会随账号灰度变（有的显示「留言自动精选公开」，有的是「已开启」）。若发现漏判，把 `text` 换成更短的特征子串（如 `精选`）或直接去掉 `text` 只留 `#js_comment_setting_area` 限定
+- `timeout` 给 1500：设置区尚未渲染时不能误判成"没有该节点"，但也不宜过长（每次未命中的运行都会白等这么久）
+
