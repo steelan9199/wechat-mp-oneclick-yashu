@@ -5,6 +5,17 @@
 
 > 2026-10-18 因用户要求移除填作者步骤。此前该写法已实测通过（2026-10-17，v2.0.0~2.0.3 在用）。
 
+## ⚠️ 先看这条：多数账号现在没有作者输入框
+
+2026-10-18 实测截图：原创弹框里「作者」一栏是**预填的只读文本**（如「牙叔教程」，直接显示账号作者名，不是 input），
+整个弹框里**不存在** `input.js_author` / `span.js_customerauthor_container`。
+
+所以：
+
+- **不能把作者框当弹框就绪信号**。等 `input.js_author` 会一直等不到 → 报 `❌ 等不到元素：等待原创弹框就绪`（v2.0.4 的故障就是这个）。
+- 弹框就绪要等**底部「确定」按钮**（见本文最后一节）。
+- 只有作者栏是**可编辑 input**（新号未设作者名、或页面改版）时，才需要下面这套输入写法。
+
 ---
 
 ## 一句话结论
@@ -179,7 +190,7 @@ python scripts/build.py --bump --out <目标目录>
 
 ## 当前（无作者输入）版本的对应写法
 
-现在 `actions.json` 里的 `original` 是：
+现在 `actions.json` 里的 `original` 是（v2.0.5 起）：
 
 ```json
 {
@@ -188,15 +199,23 @@ python scripts/build.py --bump --out <目标目录>
   "desc": "点击未声明 → 确定",
   "steps": [
     { "action": "click", "desc": "点击「未声明」", "target": "#js_original > div:nth-child(1) > div.setting-group__switch.js_original_apply.js_edit_ori > div" },
-    { "action": "waitFor", "desc": "等待原创弹框就绪", "timeout": 8000,
-      "target": ["#js_original_edit_box input.js_author", "span.js_customerauthor_container > input.js_author"] },
+    { "action": "waitFor", "desc": "等待原创弹框的「确定」按钮", "timeout": 8000,
+      "pick": "last", "text": "确定",
+      "target": ["mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+                 "button.weui-desktop-btn.weui-desktop-btn_primary"] },
     { "action": "click", "desc": "点击「确定」", "pick": "last", "text": "确定",
       "target": ["#vue_app > mp-image-product-dialog > div > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div > div:nth-child(2) > button",
+                 "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
                  "button.weui-desktop-btn.weui-desktop-btn_primary"] }
   ],
-  "verify": { "action": "gone", "timeout": 6000,
-    "target": ["span.js_customerauthor_container > input.js_author", "#js_original_edit_box input.js_author"] }
+  "verify": { "action": "gone", "timeout": 6000, "pick": "last", "text": "确定",
+    "target": ["mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+               "button.weui-desktop-btn.weui-desktop-btn_primary"] }
 }
 ```
 
-中间那个 `waitFor` 不是填作者，是等弹框渲染完（否则「确定」按钮还没出来就点空）。
+两个要点：
+
+- `waitFor` 不是填作者，是等弹框渲染完（否则「确定」按钮还没出来就点空）。**等待目标必须选弹框内一定会出现的元素**——底部「确定」按钮是唯一在"作者只读"和"作者可编辑"两种弹框里都存在的锚点。
+- `verify` 不能再用"作者输入框消失"判断：无输入框时它一开始就是 `null`，`gone` 会立即通过，形成**假绿**。统一改成「确定」按钮消失。
+

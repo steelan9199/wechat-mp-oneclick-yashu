@@ -14,12 +14,14 @@
         },
         {
           "action": "waitFor",
-          "desc": "等待原创弹框就绪",
+          "desc": "等待原创弹框的「确定」按钮",
+          "timeout": 8000,
+          "pick": "last",
+          "text": "确定",
           "target": [
-            "#js_original_edit_box input.js_author",
-            "span.js_customerauthor_container > input.js_author"
-          ],
-          "timeout": 8000
+            "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+            "button.weui-desktop-btn.weui-desktop-btn_primary"
+          ]
         },
         {
           "action": "click",
@@ -27,6 +29,7 @@
           "pick": "last",
           "target": [
             "#vue_app > mp-image-product-dialog > div > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div > div:nth-child(2) > button",
+            "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
             "button.weui-desktop-btn.weui-desktop-btn_primary"
           ],
           "text": "确定"
@@ -34,9 +37,11 @@
       ],
       "verify": {
         "action": "gone",
+        "pick": "last",
+        "text": "确定",
         "target": [
-          "span.js_customerauthor_container > input.js_author",
-          "#js_original_edit_box input.js_author"
+          "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+          "button.weui-desktop-btn.weui-desktop-btn_primary"
         ],
         "timeout": 6000
       }

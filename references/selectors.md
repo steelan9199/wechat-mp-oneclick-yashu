@@ -28,6 +28,10 @@
 
 ### 2. 弹框中的作者输入框（**唯一正确的那个**）
 
+> **2026-10-18 起多数账号没有这个框了**：原创弹框的「作者」一栏改成预填的**只读文本**（显示账号作者名，如「牙叔教程」），
+> DOM 里不存在 `input.js_author` / `span.js_customerauthor_container`。此时不要拿它当"弹框就绪"信号，
+> 要等底部「确定」按钮（见第 3 节）。仅当作者栏是可编辑 input 时，下面的选择器才适用。
+
 ```css
 span.js_customerauthor_container > input.js_author
 ```
