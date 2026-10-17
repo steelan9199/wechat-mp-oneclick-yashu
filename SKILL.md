@@ -5,7 +5,7 @@ description: 生成与维护「公众号一键设置」Edge 扩展，在公众�
 
 # 公众号一键设置扩展
 
-产出一个可直接加载到 Edge 的浏览器扩展，用于在微信公众号图文编辑页自动完成各种设置项（目前有「原创声明」「赞赏」，可按同一套方式扩展「留言」等）。
+产出一个可直接加载到 Edge 的浏览器扩展，用于在微信公众号图文编辑页自动完成各种设置项（目前有「原创声明」「赞赏」「留言」，可按同一套方式继续扩展）。
 
 核心设计：**纯配置驱动**。执行器只实现"动作能力"（点击、输入、开关、等待、校验），业务逻辑全在 `actions.json`。加一个新设置项 = 加一段 JSON，`background.js` 一行都不用改。
 
@@ -182,7 +182,7 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 
 | action | 参数 | 说明 |
 |---|---|---|
-| `click` | `target` `text` `pick` `index` | 点元素。`pick: "last"` 取最后一个可见的 |
+| `click` | `target` `text` `pick` `index` `climb` | 点元素。`pick: "last"` 取最后一个可见的；`climb: true` 点最近的 `cursor:pointer` 祖先 |
 | `type` | `target` `value` `mode` | 输入。`mode` 默认 `composed`（逐字符），别改成 `instant` |
 | `toggle` | `target` `checked` | 开关，幂等（已是目标状态就不点）。目标隐藏时自动退到 `.setting-group__switch` 父级 |
 | `radio` | `target` | 单选，幂等 |
@@ -190,11 +190,13 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 | `waitGone` | `target` `timeout` | 等元素消失 |
 | `sleep` | `ms` | 纯等待，页面动画慢时用 |
 
-公共字段：`target`（字符串或字符串数组，按顺序试）、`text`（按文本精确过滤）、`index`、`visibleOnly: false`（允许操作隐藏元素）、`optional: true`（找不到就跳过）、`wait`（动作后额外等待毫秒）、`desc`（日志里显示的名字）。
+公共字段：`target`（字符串或字符串数组，按顺序试）、`text`（按文本精确过滤，忽略空白）、`index`、`visibleOnly: false`（允许操作隐藏元素）、`optional: true`（找不到就跳过）、`wait`（动作后额外等待毫秒）、`desc`（日志里显示的名字）。
+
+**文本兜底**：`target` 里的选择器全部落空、且写了 `text` 时，执行器会自动全文档找「文本完全相等的最内层可见元素」。适合类名未知/改版场景（「留言」就是靠它）。不想要这个行为写 `"textScan": false`。注意兜底只能定位，不能提供幂等判断。
 
 **关于隐藏 checkbox（协议勾选、开关类）**：`toggle` 的幂等只在能读到 `input.checked` 时成立。`visibleOnly` 不为 false 且 input 藏着时，执行器会退到父级 `<label>`/`<div>` 上点——那玩意没有 `checked` 属性，每次都会点，已勾选时等于**取消勾选**。所以操作隐藏 checkbox 一律写成 `target: <input 的精确选择器>` + `"visibleOnly": false`，让它在 input 本身上判断状态。
 
-`verify.action`：`gone` / `exists` / `checked` / `value` / `text`。
+`verify.action`：`gone` / `exists` / `checked` / `value` / `text`。`verify.optional: true` 时校验不通过只记警告，不让整体失败（谨慎使用，会掩盖真失败）。
 
 ## 硬规则
 

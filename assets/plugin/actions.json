@@ -117,6 +117,60 @@
         ],
         "timeout": 8000
       }
+    },
+    {
+      "id": "comment",
+      "name": "留言",
+      "desc": "点「不开启留言」→ 等 1 秒 → 点弹框「确定」",
+      "steps": [
+        {
+          "action": "click",
+          "desc": "点击「不开启留言」",
+          "target": [
+            "#js_comment_setting_area > div > div.setting-group__switch > span",
+            "#js_comment_setting_area .js_comment_setting_tips",
+            "#js_comment_setting_area span.setting-group__switch-tips",
+            ".js_comment_open span",
+            ".js_comment_setting span.setting-group__switch-tips"
+          ],
+          "text": "不开启留言",
+          "climb": true,
+          "wait": 1000
+        },
+        {
+          "action": "waitFor",
+          "desc": "等待留言设置弹框",
+          "target": [
+            "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+            ".weui-desktop-dialog__ft button.weui-desktop-btn_primary"
+          ],
+          "text": "确定",
+          "pick": "last",
+          "timeout": 8000
+        },
+        {
+          "action": "click",
+          "desc": "点击「确定」",
+          "target": [
+            "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+            ".weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+            "button.weui-desktop-btn.weui-desktop-btn_primary"
+          ],
+          "text": "确定",
+          "pick": "last",
+          "wait": 1000
+        }
+      ],
+      "verify": {
+        "action": "gone",
+        "target": [
+          "mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary",
+          ".weui-desktop-dialog__ft button.weui-desktop-btn_primary"
+        ],
+        "text": "确定",
+        "pick": "last",
+        "timeout": 6000
+      }
     }
   ]
 }

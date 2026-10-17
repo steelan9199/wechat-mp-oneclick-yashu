@@ -131,6 +131,53 @@ button.weui-desktop-btn.weui-desktop-btn_primary
 
 ---
 
+## 留言（`#js_comment_setting_area`，**尚未实测**）
+
+留言区和赞赏区结构同源：右侧一行文案 + `>` 图标，点文案弹设置弹框。但**没有拿到真实 DOM**，所以这一项靠「选择器候选 + 文案兜底」双重定位：
+
+1. 先试 `target` 里的候选选择器（猜的结构，与赞赏类比）
+2. 全部落空时，自动全文档按文本 `不开启留言` 找最内层可见元素（`pickByText`）
+3. 点击时 `climb: true`，会点本身或最近的 `cursor:pointer` 祖先
+
+```json
+{ "action": "click", "desc": "点击「不开启留言」", "text": "不开启留言", "climb": true, "wait": 1000,
+  "target": [
+    "#js_comment_setting_area > div > div.setting-group__switch > span",
+    "#js_comment_setting_area .js_comment_setting_tips",
+    "#js_comment_setting_area span.setting-group__switch-tips",
+    ".js_comment_open span",
+    ".js_comment_setting span.setting-group__switch-tips"
+  ] }
+```
+
+### 弹框「确定」
+
+留言弹框与原创/赞赏共用 `mp-image-product-dialog`，按钮是绿色 `weui-desktop-btn_primary`：
+
+```css
+mp-image-product-dialog .weui-desktop-dialog__ft button.weui-desktop-btn_primary
+.weui-desktop-dialog__ft button.weui-desktop-btn_primary
+```
+
+配 `"text": "确定"` + `"pick": "last"`。校验用 `gone`：弹框关了 → 可见的「确定」消失。选择器不命中时 `gone` 直接通过（不会误报失败）。
+
+### 已知限制
+
+- **不幂等**：页面上没有「不开启留言」这行字（即留言已开启）时会报「找不到元素」，日志会附带页面上相近的文案，正常应显示 `已开启`。
+- 等服务端响应：点确定后留言行文案变「已开启」，但不同账号文案可能不同，所以没把它写进 `verify`。
+
+### 拿到真实 DOM 后要补的
+
+一旦实测失败，用下面代码在页面控制台 dump 留言区，替换掉上面的猜测选择器：
+
+```js
+const area = [...document.querySelectorAll('[id*="comment"],[class*="comment"]')]
+  .filter(e => /留言/.test(e.textContent || ''));
+area.slice(0, 3).map(e => e.outerHTML.slice(0, 1200));
+```
+
+---
+
 ## 千万不要用的选择器
 
 | 选择器 | 为什么不行 |

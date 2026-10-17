@@ -4,7 +4,7 @@
  * 所有设置项都写在 actions.json 里。加新选项 = 加一段 JSON，本文件不动。
  *
  * 支持的动作（step.action）：
- *   click     点击元素          { target, text?, pick?, index?, visibleOnly?, wait? }
+ *   click     点击元素          { target, text?, pick?, index?, visibleOnly?, climb?, wait? }
  *   type      输入文字          { target, value, mode?: "composed"|"instant" }
  *   toggle    开关（幂等）      { target, checked?: true|false }
  *   radio     单选（幂等）      { target }
@@ -14,14 +14,18 @@
  *
  * 公共字段：
  *   target      字符串或字符串数组（按顺序试候选）
- *   text        按文本精确匹配过滤
+ *   text        按文本精确匹配过滤（忽略空白差异）；选择器全没命中时
+ *               自动退化为「全文档按文本找最内层可见元素」，适合类名未知的场景。
+ *               不想用这个兜底就写 "textScan": false
  *   pick        "first"（默认）| "last"
  *   index       取第几个
  *   visibleOnly false 时才允许操作 display:none 的元素
+ *   climb       true 时点元素自身或最近的 cursor:pointer 祖先
  *   optional    true 时找不到元素就跳过
  *   wait        动作后的额外等待毫秒
  *
  * 校验（verify.action）：gone | exists | checked | value | text
+ * verify.optional 为 true 时，校验不通过只记警告，不让整次执行失败。
  */
 
 const CONFIG_FILE = 'actions.json';
@@ -54,23 +58,75 @@ function pageRun(steps, verify) {
       return r.width > 1 && r.height > 1 && getComputedStyle(el).visibility !== 'hidden';
     };
 
+    const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, '');
+
+    /* 取列表里的第 N 个：pick:last 取末尾，index 指定，默认第一个 */
+    const nth = (list, spec) => {
+      if (!list || !list.length) return null;
+      const idx = spec.pick === 'last' ? list.length - 1 : (spec.index || 0);
+      return list[idx] || list[0] || null;
+    };
+
+    /* 全文档按文本兜底：类名未知 / 改版时靠文案定位 */
+    const pickByText = (spec) => {
+      const want = norm(spec.text);
+      if (!want || !document.body) return null;
+
+      /* 先做纯文本过滤（不触发布局），再对少数命中项判可见，避免长页面卡顿 */
+      const matched = [...document.querySelectorAll(
+        'button,a,span,em,i,label,div,p,li,dt,dd,strong'
+      )].filter((e) => norm(e.textContent) === want);
+
+      if (!matched.length) return null;
+
+      const pool = matched.filter(isVisible);
+      if (!pool.length) return null;
+
+      /* 只留最内层，避免点到包着一堆内容的容器 */
+      const inner = pool.filter(
+        (e) => ![...e.children].some((c) => norm(c.textContent) === want)
+      );
+
+      return nth(inner.length ? inner : pool, spec);
+    };
+
     const pick = (spec) => {
       const targets = Array.isArray(spec.target) ? spec.target : [spec.target];
       const needVisible = spec.visibleOnly !== false;
 
       for (const t of targets) {
-        let pool = [...document.querySelectorAll(t)];
+        if (!t || typeof t !== 'string') continue;
+
+        let pool;
+        try {
+          pool = [...document.querySelectorAll(t)];
+        } catch (e) {
+          continue;
+        }
         if (!pool.length) continue;
         if (needVisible) pool = pool.filter(isVisible);
         if (!pool.length) continue;
-        if (spec.text) {
-          pool = pool.filter((e) => (e.textContent || '').trim() === spec.text);
-        }
+        if (spec.text) pool = pool.filter((e) => norm(e.textContent) === norm(spec.text));
         if (!pool.length) continue;
-        const idx = spec.pick === 'last' ? pool.length - 1 : (spec.index || 0);
-        return pool[idx] || pool[0] || null;
+
+        return nth(pool, spec);
       }
+
+      /* 选择器全部落空时才走文本兜底（textScan: false 可关闭） */
+      if (spec.text && spec.textScan !== false) return pickByText(spec);
       return null;
+    };
+
+    /* 点最内层文字元素不一定触发事件，往上找可点击的祖先 */
+    const climbClickable = (el) => {
+      let node = el;
+      for (let i = 0; i < 4 && node; i++) {
+        let cursor = '';
+        try { cursor = getComputedStyle(node).cursor; } catch (e) {}
+        if (cursor === 'pointer') return node;
+        node = node.parentElement;
+      }
+      return el;
     };
 
     const waitEl = async (spec, timeout) => {
@@ -175,10 +231,24 @@ function pageRun(steps, verify) {
         if (!el) {
           if (step.optional) { log.push('· 跳过（未找到）：' + label); continue; }
           log.push('❌ 找不到元素：' + label + '（' + JSON.stringify(step.target) + '）');
+
+          /* 附带页面实况，便于判断是「已经是目标状态」还是「改版了」 */
+          if (step.text) {
+            const head = norm(step.text).slice(0, 4);
+            const near = [...new Set(
+              [...document.querySelectorAll('span,div,button,a,p,label')]
+                .filter(isVisible)
+                .map((e) => (e.textContent || '').trim())
+                .filter((t) => t && t.length <= 24 && norm(t).includes(head))
+            )].slice(0, 5);
+            log.push('· 页面上相近的文案：' + (near.length ? near.join(' | ') : '无'));
+          }
+
           return { ok: false, log };
         }
 
         if (step.action === 'click') {
+          if (step.climb) el = climbClickable(el);
           try { el.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch (e) {}
           await sleep(80);
           el.click();
@@ -236,6 +306,10 @@ function pageRun(steps, verify) {
       }
 
       if (!ok) {
+        if (verify.optional) {
+          log.push('⚠ 校验未通过（' + verify.action + '），已按可忽略处理');
+          return { ok: true, log };
+        }
         log.push('❌ 校验未通过（' + verify.action + '），操作可能被页面拦下');
         return { ok: false, log };
       }
