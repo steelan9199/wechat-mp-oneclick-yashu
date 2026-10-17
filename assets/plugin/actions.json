@@ -5,16 +5,7 @@
     {
       "id": "original",
       "name": "原创声明",
-      "desc": "点击未声明 → 填作者 → 确定",
-      "inputs": [
-        {
-          "key": "author",
-          "label": "作者名",
-          "placeholder": "请输入作者（≤8字）",
-          "maxLength": 8,
-          "default": ""
-        }
-      ],
+      "desc": "点击未声明 → 确定",
       "steps": [
         {
           "action": "click",
@@ -23,22 +14,12 @@
         },
         {
           "action": "waitFor",
-          "desc": "等待原创弹框里的输入框",
+          "desc": "等待原创弹框就绪",
           "target": [
-            "span.js_customerauthor_container > input.js_author",
-            "#js_original_edit_box input.js_author"
+            "#js_original_edit_box input.js_author",
+            "span.js_customerauthor_container > input.js_author"
           ],
           "timeout": 8000
-        },
-        {
-          "action": "type",
-          "desc": "填写作者名",
-          "mode": "composed",
-          "target": [
-            "span.js_customerauthor_container > input.js_author",
-            "#js_original_edit_box input.js_author"
-          ],
-          "value": "{{author}}"
         },
         {
           "action": "click",
