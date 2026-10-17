@@ -12,6 +12,7 @@ description: 生成与维护「公众号一键设置」Edge 扩展，在公众�
 ## 何时使用
 
 - 用户要新增/修改/删除扩展里的某个设置项（**新增前先发 `references/input-template.md` 的清单**）
+- 用户要把「原创声明」的填作者步骤加回来 / 问作者名怎么写进去（直接抄 `references/author-input.md`，不要重新试错）
 - 用户报告"插件跑了但页面提示作者不能为空"之类的失败
 - 需要查公众号后台某元素的稳定选择器
 - 需要重新产出一份可加载的扩展目录或 zip
@@ -31,6 +32,7 @@ wechat-mp-oneclick-yashu/
 ├── scripts/build.py             校验 + 复制 + 打包
 └── references/
     ├── selectors.md             已实测的选择器清单
+    ├── author-input.md          ★ 原创作者名怎么正确输入（当前已删，恢复时照抄）
     ├── input-template.md        ★ 加新功能时先发给用户填的清单
     └── pitfalls.md              踩坑记录（改之前先读）
 ```
