@@ -99,11 +99,16 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 
 **例外（2026-10 起，留言验证过）**：如果新功能满足**全部**条件——纯点击、无输入、目标文案在页面上唯一、且失败后果只是"没点上"（不会写错数据）——可以直接用 `text` + 文本兜底实现，不必等清单。「不开启留言」就是这么加的，一次通过。只要碰输入框、同 class 多份、或需要读/切状态，仍然必须先拿真实 DOM。
 
+**对照（2026-10-17，创作来源）**：用户直接把每一步的 HTML + selector + 父级结构写在笔记里，同样一次通过（含弹窗内 radio 选项 + 确认按钮）。结论不是"清单可省"，而是**信息够就能一次过**——用户主动给了清单内容时，不必再走一遍发模板的流程，直接校验信息完整性即可。
+
 清单必须覆盖：
 
 - **全局**：功能名、所在页面、前置状态、输入参数及限制、成功标志、失败提示原文
 - **每个元素**：元素 HTML、selector、父级元素 HTML、可见与否、动作类型
 - **输入类额外**：旁边有没有字数计数器（`0/8` 这种）
+- **成功标志额外**：变化后那一行的 HTML / 文案，并确认它属于本行（不是抄来的）
+- **弹窗类额外**：弹窗容器 class、要选的选项、底部按钮的实际文字（确定 / 确认）、按钮是否初始禁用
+- **兄弟行**：上下有没有同文案、同结构的设置行
 
 用户填完先做自查，缺任何一项都追问，**不要用默认值糊过去**：
 
@@ -112,7 +117,10 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 | 父级元素信息 | 同 class 重复元素必踩坑，会写错输入框 |
 | 可见性说明 | 无法确认目标是唯一可见元素 |
 | 成功判定标准 | `verify` 写不出来，失败会被当成功 |
+| 成功标志属于本行 | 抄了别的功能的节点 → 校验永远不过 |
 | 输入框有无计数器 | 可能用错输入模式，页面提示"不能为空" |
+| 有无同文案兄弟行 | 兜底会点错行（三处「未添加」） |
+| 按钮文案是否照抄 | 「确认」写成「确定」就是找不到元素 |
 
 ### 第 1 步：手工走一遍
 
@@ -164,6 +172,40 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 }
 ```
 
+第二个例子（「创作来源」，2026-10-17 实测通过）——**弹窗内选一个选项再确认**这类结构，照这个写：
+
+```json
+{
+  "id": "claim_source",
+  "name": "创作来源",
+  "desc": "点「未添加」→ 选「内容由AI生成」→ 确认",
+  "steps": [
+    { "action": "click", "desc": "点击「创作来源」行的「未添加」",
+      "text": "未添加", "textScan": false, "climb": true, "wait": 1000,
+      "target": [
+        "#js_claim_source_area > label > div.allow_click_opr.js_claim_source_desc > span.lbl_content_desc_default",
+        "#js_claim_source_area .js_claim_source_desc span.lbl_content_desc_default"
+      ] },
+    { "action": "waitFor", "desc": "等待创作来源弹框", "timeout": 8000,
+      "target": ["div.claim-source-dialog .weui-desktop-dialog__ft", "div.claim-source-dialog"] },
+    { "action": "click", "desc": "选择「内容由AI生成」", "text": "内容由AI生成", "wait": 600,
+      "target": ["div.claim-source-dialog .weui-desktop-form__check-content",
+                 "div.claim-source-dialog .weui-desktop-form__check-label > span"] },
+    { "action": "click", "desc": "点击「确认」", "text": "确认", "pick": "last", "wait": 1200,
+      "target": ["div.claim-source-dialog .weui-desktop-dialog__ft div.weui-desktop-btn_wrp button.weui-desktop-btn_primary",
+                 "#vue_app > mp-image-product-dialog > div.claim-source-dialog > div.weui-desktop-dialog__wrp > div > div.weui-desktop-dialog__ft > div:nth-child(1) > button"] }
+  ],
+  "verify": { "action": "text", "value": "AI", "timeout": 8000,
+    "target": ["#js_claim_source_area .js_claim_source_desc"] }
+}
+```
+
+三个要点：
+
+- `"textScan": false`：这一行和「集合」「原文链接」两行的文案都是「未添加」，兜底会点到第一行（集合）
+- 选项类弹窗：点选项的 `<span>`（事件冒泡到 label 切换 radio）比点隐藏的 `input[type=radio]` 稳
+- 按钮文案这里是「**确认**」，和其他弹窗的「确定」不是一个词；且未选类型时是禁用态，选完要 `wait` 再点
+
 带输入参数时，加 `inputs` 数组，`key` 在 steps 里用 `{{key}}` 引用：
 
 ```json
@@ -211,9 +253,10 @@ git add -A && git commit -m "feat: 加赞赏设置" && git push
 5. **每个设置项必须有 `verify`**。只打印"已点击确定"毫无意义，必须验证目标状态真的变了。
 6. **改完必须三件事**：跑 build、重载扩展、刷新页面。只刷新网页不生效。
 7. **版本号只在用户要求升位时加 `--bump`**。同一份代码重复打包不要反复升位，否则版本号失去意义；`--bump` 会写回源码，属于持久变更。
-8. **加新功能前必须先发清单**。把 `references/input-template.md` 发给用户、等用户填完，才能开始写配置。收到清单前列出的信息之前不许动 `actions.json`。
-9. **同页可能有多个弹框同时存在**。原创、赞赏共用 `mp-image-product-dialog` 这个容器，关掉的弹框节点仍在 DOM 里。定位弹框内的按钮必须"弹框专属 class + 可见性过滤"双保险，点确定一律配 `"text": "确定"` + `"pick": "last"`，否则可能点到另一个弹框的按钮。
+8. **加新功能前必须先发清单**。把 `references/input-template.md` 发给用户、等用户填完，才能开始写配置。收到清单前列出的信息之前不许动 `actions.json`。**唯一例外**：用户自己已经把每一步的 HTML + selector + 父级结构 + 成功标志贴出来了（创作来源就是这样），此时按清单逐项核对即可，不必再发模板。
+9. **同页可能有多个弹框同时存在**。原创、赞赏、留言、创作来源共用 `mp-image-product-dialog` 这个容器，关掉的弹框节点仍在 DOM 里。定位弹框内的按钮必须"弹框专属 class（如 `div.claim-source-dialog`）+ 可见性过滤"双保险，点确认一律配 `"text": "<按钮实际文案>"` + `"pick": "last"`，否则可能点到另一个弹框的按钮。**按钮文案照实际界面核对**：多数弹窗是「确定」，创作来源是「确认」，写错就是"找不到元素"。
 10. **每加一项就把实测通过的选择器写回 `references/selectors.md`**。选择器会随微信改版失效，文档是下次排障的第一手依据。
+11. **兄弟行文案相同时必须行 id 限定 + 关兜底**。设置区的「集合 / 原文链接 / 创作来源」三行右侧都是「未添加」，`textScan` 兜底默认取第一个命中项 = 点错行。这类结构一律写 `"textScan": false`，宁可报错也不能点错设置项。
 
 ## 排障
 

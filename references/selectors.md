@@ -178,7 +178,7 @@ area.slice(0, 3).map(e => e.outerHTML.slice(0, 1200));
 
 ---
 
-## 创作来源（`#js_claim_source_area`，2026-10-17 录入）
+## 创作来源（`#js_claim_source_area`，2026-10-17 实测通过）
 
 「集合 / 原文链接 / 创作来源」三行结构相同，右侧都是「未添加」，**必须用行 id 限定**，不能靠文案兜底（页面上共 3 处「未添加」）。
 
@@ -243,6 +243,12 @@ div.claim-source-dialog .weui-desktop-dialog__ft div.weui-desktop-btn_wrp button
 `#js_claim_source_area .js_claim_source_desc` 的文本从「未添加icon」变成「内容由AI生成…」。
 
 `verify` 用 `action: "text"` + `value: "AI"`：只取「AI」两个字，兼容页面以后写成「内容由AI生成」/「AI生成」等不同文案；该容器里除状态文案外没有别的字，不会误命中。
+
+**注意（需求笔记里的坑）**：用户笔记的「第四步 检查这个节点是否出现」贴的是 `留言自动精选公开`（`#js_comment_and_fansmsg_area`），那是上一条「留言」功能的记录，与本项无关。实测采用的是上面这条文案判据，一次通过。**照抄需求笔记的成功标志前，先确认它是不是同一行的元素。**
+
+### 6. 各项候选选择器的实测命中情况
+
+`2026-10-17` 一次通过，但**未逐条验证命中的是 `target` 里第几条**。若日后报「找不到元素」，按顺序排查：先看 `#js_claim_source_area` 是否还在（该行改版/未渲染），再看 `.js_claim_source_desc`、`span.lbl_content_desc_default` 这两个 class 有没有改名。
 
 ---
 
